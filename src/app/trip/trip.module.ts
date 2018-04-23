@@ -11,7 +11,7 @@ import { NguiMapModule} from '@ngui/map';
 @NgModule({
   imports: [
     CommonModule,
-    NguiMapModule.forRoot({apiUrl: 'https://maps.google.com/maps/api/js?key=' + environment.googleMapsApiKey})
+    NguiMapModule.forRoot({apiUrl: 'https://maps.google.com/maps/api/js?libraries=places&key=' + environment.googleMapsApiKey})
   ],
   declarations: [TripComponent]
 })

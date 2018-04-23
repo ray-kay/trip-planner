@@ -1,1 +1,17 @@
-<ngui-map center="Brampton, Canada"></ngui-map>
+<h4>{{ trip.title }}</h4>
+
+<input places-auto-complete (place_changed)="autoCompleteResult($event)" [types]="['geocode']" />
+
+<ngui-map [center]="center" (click)="clickOnMap($event)">
+
+  <marker *ngIf="marker.position" [position]="marker.position" draggable="true" (click)="toggleInfoWindow($event)"></marker>
+  <info-window id="iw">
+    <div>
+      {{ marker.title }}
+    </div>
+    <button (click)="addMarkerToTrip(marker)">Add to Trip</button>
+  </info-window>
+
+  <marker *ngFor="let destination of trip.destinations" [position]="[destination.lat, destination.lng]"></marker>
+
+</ngui-map>
