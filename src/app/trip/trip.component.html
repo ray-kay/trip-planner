@@ -2,16 +2,36 @@
 
 <input places-auto-complete (place_changed)="autoCompleteResult($event)" [types]="['geocode']" />
 
-<ngui-map [center]="center" (click)="clickOnMap($event)">
+<ngui-map [center]="center" (click)="clickOnMap($event)" (mapReady$)="onMapReady($event)">
 
-  <marker *ngIf="marker.position" [position]="marker.position" draggable="true" (click)="toggleInfoWindow($event)"></marker>
-  <info-window id="iw">
-    <div>
-      {{ marker.title }}
+  <marker *ngIf="marker && marker.position" [position]="marker.position" draggable="true" (click)="toggleInfoWindow($event)"></marker>
+  <info-window id="markerInfoWindow">
+    <div *ngIf="marker">
+      <div>
+        {{ marker.title }}
+      </div>
+      <button (click)="addMarkerToTrip(marker)">Add to Trip</button>
     </div>
-    <button (click)="addMarkerToTrip(marker)">Add to Trip</button>
   </info-window>
 
-  <marker *ngFor="let destination of trip.destinations" [position]="[destination.lat, destination.lng]"></marker>
+  <info-window id="destinationInfoWindow">
+    <div *ngIf="activeDestination">
+      <div>
+        {{ activeDestination.order }}
+      </div>
+      <button (click)="addMarkerToTrip(activeDestination)">Add to Trip</button>
+    </div>
+  </info-window>
+
+  <custom-marker *ngFor="let destination of trip.destinations; let i = index" [position]="[destination.lat, destination.lng]" (click)="clickDestinationMarker($event, i, destination)" (initialized$)="customMarkers.push($event)">
+    <div class="destination-marker">{{destination.order}}</div>
+  </custom-marker>
+
+  <directions-renderer *ngFor="let direction of trip.directions"
+    [suppressMarkers]="true"
+    [draggable]="false"
+    [directions-request]="direction">
+  </directions-renderer>
 
 </ngui-map>
+
