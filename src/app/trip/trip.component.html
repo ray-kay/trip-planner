@@ -4,7 +4,7 @@
 
 <ngui-map [center]="center" (click)="clickOnMap($event)" (mapReady$)="onMapReady($event)">
 
-  <marker *ngIf="marker && marker.position" [position]="marker.position" draggable="true" (click)="toggleInfoWindow($event)"></marker>
+  <marker *ngIf="marker && marker.position" [position]="marker.position" [draggable]="true" (click)="toggleInfoWindow($event)"></marker>
   <info-window id="markerInfoWindow">
     <div *ngIf="marker">
       <div>
@@ -19,18 +19,28 @@
       <div>
         {{ activeDestination.order }}
       </div>
-      <button (click)="addMarkerToTrip(activeDestination)">Add to Trip</button>
+      <button (click)="removeDestination(activeDestination)">Remove from Trip</button>
     </div>
   </info-window>
 
-  <custom-marker *ngFor="let destination of trip.destinations; let i = index" [position]="[destination.lat, destination.lng]" (click)="clickDestinationMarker($event, i, destination)" (initialized$)="customMarkers.push($event)">
-    <div class="destination-marker">{{destination.order}}</div>
-  </custom-marker>
+  <marker *ngFor="let destination of trip.destinations; let i = index"
+          [position]="[destination.lat, destination.lng]"
+          (click)="clickDestinationMarker($event, destination)"
+          [draggable]="true"
+          (dragend)="destinationMarkerDragEnd($event, i)"
+          [icon]="{
+            url: '/assets/images/map/destination-marker.png',
+            anchor: [14, 43],
+            size: [27, 43],
+            scaledSize: [27, 43]
+          }">
+    <!--<div class="destination-marker">{{destination.order}}</div>-->
+  </marker>
 
   <directions-renderer *ngFor="let direction of trip.directions"
     [suppressMarkers]="true"
-    [draggable]="false"
-    [directions-request]="direction">
+    [draggable]="true"
+    [directions-request]="direction.request">
   </directions-renderer>
 
 </ngui-map>

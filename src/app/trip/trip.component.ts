@@ -2,7 +2,7 @@ import {Component, ViewChild, OnInit} from '@angular/core';
 
 import { NguiMapComponent, DirectionsRenderer } from '@ngui/map';
 
-import {Trip} from '../shared/interface/trip';
+import {Trip, Direction} from '../shared/interface/trip';
 import {Destination} from '../shared/interface/destination';
 
 @Component({
@@ -25,16 +25,19 @@ export class TripComponent implements OnInit {
   }
 
   ngOnInit() {
+    // default test data
     this.trip = {
       title: 'My new trip',
       destinations: [{
         lat: -33.89440625978433,
         lng: 151.21222767700192,
-        order: 1
+        order: 1,
+        directionOriginIndex: 0
       }, {
         lat: -33.87,
         lng: 151.25,
-        order: 2
+        order: 2,
+        directionDestinationIndex: 0
       }],
     };
   }
@@ -44,9 +47,12 @@ export class TripComponent implements OnInit {
 
     // add directions here as only then we have google available
     this.trip.directions = [{
-      origin: { lat: -33.89440625978433, lng: 151.21222767700192 },
-      destination: { lat: -33.87, lng: 151.25 },
-      travelMode: google.maps.TravelMode.WALKING
+      request: {
+        origin: {lat: -33.89440625978433, lng: 151.21222767700192},
+        destination: {lat: -33.87, lng: 151.25},
+        travelMode: google.maps.TravelMode.DRIVING,
+        provideRouteAlternatives: true
+      }
     }];
   }
 
@@ -74,10 +80,71 @@ export class TripComponent implements OnInit {
     this.infoWindowShown = !this.infoWindowShown;
   }
 
-  clickDestinationMarker(event, customMarkerIndex: number, destination: Destination) {
-    event.stopImmediatePropagation();
+  clickDestinationMarker({target: marker}, destination: Destination) {
     this.activeDestination = destination;
-    this.nguiMapComponent.openInfoWindow('destinationInfoWindow', this.customMarkers[customMarkerIndex]);
+    this.nguiMapComponent.openInfoWindow('destinationInfoWindow', marker);
+  }
+
+  destinationMarkerDragEnd(event, destinationIndex: number) {
+    const destination: Destination = Object.assign({}, this.trip.destinations[destinationIndex]);
+    destination.lat = event.latLng.lat();
+    destination.lng = event.latLng.lng();
+
+    this.trip.destinations[destinationIndex] = destination; // need to update the whole instance otherwise change will not be detected
+
+    // find direction and update it
+
+    if (Number.isInteger(destination.directionOriginIndex)) {
+      const newDirection: Direction = Object.assign({}, this.trip.directions[destination.directionOriginIndex]);
+      newDirection.request.origin = {lat: destination.lat, lng: destination.lng};
+      this.trip.directions[destination.directionOriginIndex] = newDirection; // update whole instance otherwise change will not be detected
+    }
+
+    if (Number.isInteger(destination.directionDestinationIndex)) {
+      const newDirection: Direction = Object.assign({}, this.trip.directions[destination.directionDestinationIndex]);
+      newDirection.request.destination = {lat: destination.lat, lng: destination.lng};
+      this.trip.directions[destination.directionDestinationIndex] = newDirection;
+    }
+  }
+
+  removeDestination(destination: Destination) {
+    const destinations = Object.assign([], this.trip.destinations);
+    const directions = Object.assign([], this.trip.directions);
+    const length = destinations.length;
+    const index = destination.order - 1;
+
+    const prevDestination: Destination = destinations[index - 1] || null;
+    const nextDestination: Destination = destinations[index + 1] || null;
+
+    // update directions if set
+    // check if we have a next destination
+    for (let i = index; i < length; i++) {
+      destinations[i].order--;
+    }
+
+    if (Number.isInteger(destination.directionOriginIndex)) {
+      directions.splice(destination.directionOriginIndex, 1);
+    }
+
+    if (Number.isInteger(destination.directionDestinationIndex)) {
+      directions.splice(destination.directionDestinationIndex, 1);
+    }
+
+    if (nextDestination && Number.isInteger(nextDestination.directionDestinationIndex)) {
+      destinations[index + 1].directionDestinationIndex = null;
+    }
+
+    if (prevDestination && Number.isInteger(prevDestination.directionOriginIndex)) {
+      destinations[index - 1].directionOriginIndex = null;
+    }
+
+    destinations.splice(index, 1);
+    this.trip.destinations = destinations;
+    this.trip.directions = directions;
+    console.log('destinations', destinations);
+    console.log('directions', directions);
+
+    this.nguiMapComponent.closeInfoWindow('destinationInfoWindow');
   }
 
   addMarkerToTrip(marker) {
@@ -129,11 +196,23 @@ export class TripComponent implements OnInit {
     this.trip.destinations.push(destination);
 
     if (this.trip.destinations.length > 1) {
+      const newDirectionIndex = this.trip.directions.length;
+
       const lastDest = this.trip.destinations[this.trip.destinations.length - 2];
-      const direction: google.maps.DirectionsRequest = {
-        origin: { lat: lastDest.lat, lng: lastDest.lng}, // lastDest.fullAddress,
-        destination: { lat: destination.lat, lng: destination.lng}, // destination.fullAddress,
-        travelMode: google.maps.TravelMode.WALKING
+      lastDest.directionOriginIndex = newDirectionIndex;
+
+      // dest 0 -> 1 (lastDest -> destination)
+      lastDest.directionOriginIndex = newDirectionIndex; // set 0 as org
+      destination.directionDestinationIndex = newDirectionIndex; // set 1 dest
+
+      // dest 0 -> 1 -> 2 ( = lastDest (1) need destination, 2
+
+      const direction: Direction = {
+        request: {
+          origin: {lat: lastDest.lat, lng: lastDest.lng}, // lastDest.fullAddress,
+          destination: {lat: destination.lat, lng: destination.lng}, // destination.fullAddress,
+          travelMode: google.maps.TravelMode.DRIVING
+        }
       };
 
       this.trip.directions.push(direction);

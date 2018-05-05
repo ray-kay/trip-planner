@@ -4,4 +4,6 @@ export interface Destination {
   order: number;
   title?: string;
   fullAddress?: string;
+  directionOriginIndex?: number;
+  directionDestinationIndex?: number;
 }
