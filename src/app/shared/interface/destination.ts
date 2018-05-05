@@ -1,9 +1,9 @@
 export interface Destination {
   lat: number;
   lng: number;
-  order: number;
   title?: string;
   fullAddress?: string;
-  directionOriginIndex?: number;
-  directionDestinationIndex?: number;
+  showDirection?: boolean;
+  directionsRequest?: google.maps.DirectionsRequest;
+  directionOptions?: google.maps.DirectionsRendererOptions;
 }
