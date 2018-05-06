@@ -4,13 +4,14 @@
 
 <ngui-map [center]="center" (click)="clickOnMap($event)" (mapReady$)="onMapReady($event)">
 
-  <marker *ngIf="marker && marker.position" [position]="marker.position" [draggable]="true" (click)="toggleInfoWindow($event)"></marker>
+  <marker *ngIf="marker && marker.position" [position]="marker.position" [draggable]="true"
+          (click)="toggleInfoWindow($event)" (dragend)="marker.position = $event.latLng"></marker>
   <info-window id="markerInfoWindow">
     <div *ngIf="marker">
       <div>
         {{ marker.title }}
       </div>
-      <button (click)="addDestination(marker.position.lat(), marker.position.lng())">Add to Trip</button>
+      <button (click)="addDestination(marker.position.lat(), marker.position.lng())">Add</button>
     </div>
   </info-window>
 
@@ -19,7 +20,9 @@
       <div>
         {{ activeDestinationIndex + 1}}
       </div>
-      <button (click)="removeDestination(activeDestinationIndex)">Remove from Trip</button>
+      <button (click)="removeDestination(activeDestinationIndex)">Remove</button>
+      <button *ngIf="activeDestinationIndex > 0" (click)="changeDestinationPosition(activeDestinationIndex, activeDestinationIndex - 1)">Move prev</button>
+      <button *ngIf="destinations.length > 1 && activeDestinationIndex < (destinations.length - 1)" (click)="changeDestinationPosition(activeDestinationIndex, activeDestinationIndex + 1)">Move next</button>
     </div>
   </info-window>
 

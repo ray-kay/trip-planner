@@ -1,9 +1,11 @@
 import {Component, ViewChild, OnInit} from '@angular/core';
 
-import { NguiMapComponent, DirectionsRenderer } from '@ngui/map';
+import {NguiMapComponent, DirectionsRenderer} from '@ngui/map';
 
 import {Trip} from '../shared/interface/trip';
 import {Destination} from '../shared/interface/destination';
+import {Helpers} from '../shared/helpers';
+
 
 @Component({
   selector: 'app-trip',
@@ -39,7 +41,7 @@ export class TripComponent implements OnInit {
     this.addDestination(-33.87, 151.25);
   }
 
-  clickOnMap (event) {
+  clickOnMap(event) {
     if (event instanceof MouseEvent) {
       return false;
     }
@@ -70,10 +72,10 @@ export class TripComponent implements OnInit {
       lng: lng,
       title: title || '',
       fullAddress: '',
-      showDirection: length > 0
+      showDirection: true
     };
 
-    if (destination.showDirection) {
+    if (length > 0) {
       const prevDest = this.destinations[length - 1];
       destination.directionsRequest = {
         origin: {lat: prevDest.lat, lng: prevDest.lng},
@@ -119,7 +121,7 @@ export class TripComponent implements OnInit {
     destination.lat = event.latLng.lat();
     destination.lng = event.latLng.lng();
 
-    if (destination.showDirection) { // end of direction
+    if (destination.directionsRequest) { // end of direction
       destination.directionsRequest.destination = {lat: destination.lat, lng: destination.lng};
     }
 
@@ -127,7 +129,7 @@ export class TripComponent implements OnInit {
 
     if (destinationIndex < (this.destinations.length - 1) && this.destinations[destinationIndex + 1]) {
       const nextDestination: Destination = Object.assign({}, this.destinations[destinationIndex + 1]);
-      if (nextDestination.showDirection && nextDestination.directionsRequest) {
+      if (nextDestination.directionsRequest) {
         nextDestination.directionsRequest.origin = {lat: destination.lat, lng: destination.lng};
         this.destinations[destinationIndex + 1] = nextDestination;
       }
@@ -140,24 +142,86 @@ export class TripComponent implements OnInit {
 
     // check if we have destination before & after
     if (prevDestination && nextDestination) {
-      if (nextDestination.showDirection && nextDestination.directionsRequest) {
+      if (nextDestination.directionsRequest) {
         // need to update the whole instance otherwise change will not be detected
         const nextDestinationUpdated: Destination = Object.assign({}, this.destinations[destinationIndex + 1]);
         nextDestinationUpdated.directionsRequest.origin = {lat: prevDestination.lat, lng: prevDestination.lng};
         this.destinations[destinationIndex + 1] = nextDestinationUpdated;
       }
     } else if (nextDestination) { // check if we only have destination after
-      nextDestination.showDirection = false;
       nextDestination.directionsRequest = null;
     }
     // remove
     this.destinations.splice(destinationIndex, 1);
   }
 
-  private addSearchLocationMarker(latLng: google.maps.LatLng, title = '') {
+  changeDestinationPosition(destinationIndex: number, newIndex: number) {
+    const oldDestinations: Destination[] = Object.assign([], this.destinations);
+    const oldPrevDestination: Destination = oldDestinations[destinationIndex - 1] || null;
+    const oldNextDestination: Destination = oldDestinations[destinationIndex + 1] || null;
+
+    // update the old next destination to use direction origin from old prev destination
+    if (oldNextDestination) {
+      if (oldPrevDestination) {
+        // need to clone and reassign the whole directionsRequest object otherwise view wont recognise change
+        const directionsRequest = Object.assign({}, this.destinations[destinationIndex + 1].directionsRequest);
+        directionsRequest.origin = {lat: oldPrevDestination.lat, lng: oldPrevDestination.lng};
+        this.destinations[destinationIndex + 1].directionsRequest = directionsRequest;
+      } else {
+        this.destinations[destinationIndex + 1].directionsRequest = null;
+      }
+    }
+
+    let newDestinations: Destination[] = Object.assign([], this.destinations);
+
+    // move destination to new position
+    newDestinations = Helpers.moveArrayElement(newDestinations, destinationIndex, newIndex);
+
+    const destination = newDestinations[newIndex];
+
+    const newPrevDestination: Destination = newDestinations[newIndex - 1] || null;
+    const newNextDestination: Destination = newDestinations[newIndex + 1] || null;
+
+    // first update the direction origin of the destination to the new prev destination if we have one
+    if (newPrevDestination) {
+      if (destination.directionsRequest) {
+        const directionsRequest = Object.assign({}, destination.directionsRequest);
+        directionsRequest.origin = {lat: newPrevDestination.lat, lng: newPrevDestination.lng};
+        destination.directionsRequest = directionsRequest;
+      } else {
+        destination.directionsRequest = {
+          origin: {lat: newPrevDestination.lat, lng: newPrevDestination.lng},
+          destination: {lat: destination.lat, lng: destination.lng},
+          travelMode: (newPrevDestination.directionsRequest ?
+            newPrevDestination.directionsRequest.travelMode : google.maps.TravelMode.DRIVING)
+        };
+      }
+    } else {
+      destination.directionsRequest = null;
+    }
+
+    // check new next destination direction if we need to update direction form current as origin
+    if (newNextDestination) {
+      if (newNextDestination.directionsRequest) {
+        const directionsRequest = Object.assign({}, newNextDestination.directionsRequest);
+        directionsRequest.origin = {lat: destination.lat, lng: destination.lng};
+        newNextDestination.directionsRequest = directionsRequest;
+      } else {
+        newNextDestination.directionsRequest = {
+          origin: {lat: destination.lat, lng: destination.lng},
+          destination: {lat: newNextDestination.lat, lng: newNextDestination.lng},
+          travelMode: (destination.directionsRequest ? destination.directionsRequest.travelMode : google.maps.TravelMode.DRIVING)
+        };
+      }
+    }
+
+    this.destinations = newDestinations; // update destinations
+  }
+
+  private addSearchLocationMarker(latLng: google.maps.LatLng, title?: string) {
     this.marker = {
       position: latLng,
-      title: title
+      title: title || ''
     };
   }
 
