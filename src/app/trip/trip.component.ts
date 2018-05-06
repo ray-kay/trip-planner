@@ -24,6 +24,7 @@ export class TripComponent implements OnInit {
   center: google.maps.LatLng;
   infoWindowShown = false;
   marker: any; // = { title: null, position: null} // { lat: null, lng: null };
+  destinationChangeInProgress = false;
 
   constructor() {
   }
@@ -66,7 +67,6 @@ export class TripComponent implements OnInit {
   }
 
   addDestination(lat: number, lng: number, title?: string) {
-    const length = this.destinations.length;
     const destination: Destination = {
       lat: lat,
       lng: lng,
@@ -75,6 +75,8 @@ export class TripComponent implements OnInit {
       showDirection: true
     };
 
+/*with old pipe transformOld
+    const length = this.destinations.length;
     if (length > 0) {
       const prevDest = this.destinations[length - 1];
       destination.directionsRequest = {
@@ -83,10 +85,12 @@ export class TripComponent implements OnInit {
         travelMode: google.maps.TravelMode.DRIVING,
         provideRouteAlternatives: true
       };
-    }
+    }*/
 
     this.resetCurrentMarker();
-    this.destinations.push(destination);
+    const destinations: Destination[] = Object.assign([], this.destinations);
+    destinations.push(destination);
+    this.destinations = destinations;
     /*
     const self = this;
     this.geocoder.geocode({'location': {lat: marker.position.lat(), lng: marker.position.lng()}}, function(results, status) {
@@ -117,10 +121,14 @@ export class TripComponent implements OnInit {
   }
 
   destinationMarkerDragEnd(event, destinationIndex: number) {
-    const destination: Destination = Object.assign({}, this.destinations[destinationIndex]);
+    const destinations: Destination[] = Object.assign([], this.destinations);
+    const destination: Destination = Object.assign({}, destinations[destinationIndex]);
     destination.lat = event.latLng.lat();
     destination.lng = event.latLng.lng();
+    destinations[destinationIndex] = destination;
 
+    this.destinations = destinations;
+/* with old pipe
     if (destination.directionsRequest) { // end of direction
       destination.directionsRequest.destination = {lat: destination.lat, lng: destination.lng};
     }
@@ -133,10 +141,14 @@ export class TripComponent implements OnInit {
         nextDestination.directionsRequest.origin = {lat: destination.lat, lng: destination.lng};
         this.destinations[destinationIndex + 1] = nextDestination;
       }
-    }
+    }*/
   }
 
   removeDestination(destinationIndex: number) {
+    const destinations: Destination[] = Object.assign([], this.destinations);
+    destinations.splice(destinationIndex, 1);
+    this.destinations = destinations;
+/* with old pipe
     const prevDestination: Destination = this.destinations[destinationIndex - 1] || null;
     const nextDestination: Destination = this.destinations[destinationIndex + 1] || null;
 
@@ -152,10 +164,19 @@ export class TripComponent implements OnInit {
       nextDestination.directionsRequest = null;
     }
     // remove
-    this.destinations.splice(destinationIndex, 1);
+    this.destinations.splice(destinationIndex, 1);*/
   }
 
   changeDestinationPosition(destinationIndex: number, newIndex: number) {
+    if (!this.destinationChangeInProgress) {
+      this.destinationChangeInProgress = true;
+      const destinations: Destination[] = Object.assign([], this.destinations);
+      Helpers.moveArrayElement(destinations, destinationIndex, newIndex);
+      this.destinations = destinations;
+
+      setTimeout(() => { this.destinationChangeInProgress = false; }, 300);
+    }
+/* with old pipe
     const oldDestinations: Destination[] = Object.assign([], this.destinations);
     const oldPrevDestination: Destination = oldDestinations[destinationIndex - 1] || null;
     const oldNextDestination: Destination = oldDestinations[destinationIndex + 1] || null;
@@ -216,6 +237,7 @@ export class TripComponent implements OnInit {
     }
 
     this.destinations = newDestinations; // update destinations
+    */
   }
 
   private addSearchLocationMarker(latLng: google.maps.LatLng, title?: string) {
